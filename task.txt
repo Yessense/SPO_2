@@ -1,0 +1,11 @@
+# PYTHON
+
+- parse tokens: (1 + 2) * 3
+- build parse tree # цикл, переменные, тело цикла, if, else
+    (* (+ 1 2) 3)
+- Упрощается в AST абстрактное синтаксическое действие
+    (* (+ 1 2) 3)
+
+    - run
+    - compile to machine code
+    - compile to machine-independent "byte code"
