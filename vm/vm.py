@@ -17,6 +17,7 @@ class Frame:
     Text description of frame parameters
         https://docs.python.org/3/library/inspect.html?highlight=frame#types-and-members
     """
+
     def __init__(self,
                  frame_code: types.CodeType,
                  frame_builtins: tp.Dict[str, tp.Any],
@@ -78,7 +79,14 @@ class Frame:
             https://github.com/python/cpython/blob/3.7/Python/ceval.c#L2057
         """
         # TODO: parse all scopes
-        self.push(self.locals[arg])
+        if arg in self.locals:
+            self.push(self.locals[arg])
+        elif arg in self.globals:
+            self.push(self.globals[arg])
+        elif arg in self.builtins:
+            self.push(self.builtins[arg])
+        else:
+            raise NameError
 
     def load_global_op(self, arg: str) -> None:
         """
@@ -88,8 +96,12 @@ class Frame:
         Operation realization:
             https://github.com/python/cpython/blob/3.7/Python/ceval.c#L2108
         """
-        # TODO: parse all scopes
-        self.push(self.builtins[arg])
+        if arg in self.globals:
+            self.push(self.globals[arg])
+        elif arg in self.builtins:
+            self.push(self.builtins[arg])
+        else:
+            raise NameError
 
     def load_const_op(self, arg: tp.Any) -> None:
         """

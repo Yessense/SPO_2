@@ -1,0 +1,1 @@
+pytest ./vm/test_public.py::test_all_cases["$1"] -vvv
