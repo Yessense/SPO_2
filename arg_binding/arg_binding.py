@@ -1,21 +1,20 @@
-import types
-from collections import OrderedDict
 from types import FunctionType
 from typing import Any, Dict, Optional, Tuple, List, cast
-from dis import COMPILER_FLAG_NAMES as compiler_flag_names
 
-import pytest
+# from dis import COMPILER_FLAG_NAMES as compiler_flag_names
 
-COMPILER_FLAG_NAMES = {1: 'OPTIMIZED',
-                       2: 'NEWLOCALS',
-                       4: 'VARARGS',
-                       8: 'VARKEYWORDS',
-                       16: 'NESTED',
-                       32: 'GENERATOR',
-                       64: 'NOFREE',
-                       128: 'COROUTINE',
-                       256: 'ITERABLE_COROUTINE',
-                       512: 'ASYNC_GENERATOR'}
+# import pytest
+
+# COMPILER_FLAG_NAMES = {1: 'OPTIMIZED',
+#                        2: 'NEWLOCALS',
+#                        4: 'VARARGS',
+#                        8: 'VARKEYWORDS',
+#                        16: 'NESTED',
+#                        32: 'GENERATOR',
+#                        64: 'NOFREE',
+#                        128: 'COROUTINE',
+#                        256: 'ITERABLE_COROUTINE',
+#                        512: 'ASYNC_GENERATOR'}
 
 # The code object has a variable positional parameter (*args-like).
 CO_VARARGS = 0x0004
@@ -94,16 +93,24 @@ def bind_args(func: FunctionType, *args: Any, **kwargs: Any) -> Dict[str, Any]:
                 raise TypeError(ERR_MULT_VALUES_FOR_ARG)
         elif name in kwargs:
             call_args[name] = kwargs[name]
-        elif n_defaults and i - defaults_pos < n_defaults and i - defaults_pos >= 0:
+        elif n_defaults and n_defaults > i - defaults_pos >= 0:
             call_args[name] = defaults[i - defaults_pos]
         else:
             raise TypeError(ERR_MISSING_POS_ARGS)
+
+    # ----------------------------------------
+    # *Args
+    # ----------------------------------------
 
     if n_args > co_arg_count:
         if co_flags & CO_VARARGS:
             f_varargs = args[co_arg_count:]
         else:
             raise TypeError(ERR_TOO_MANY_POS_ARGS)
+
+    # ----------------------------------------
+    # kwonly
+    # ----------------------------------------
 
     kwonly_pos = co_arg_count
     for i in range(co_kwonlyargcount):
@@ -116,6 +123,10 @@ def bind_args(func: FunctionType, *args: Any, **kwargs: Any) -> Dict[str, Any]:
               name in kwdefaults and
               name not in call_args):
             call_args[name] = kwdefaults[name]
+
+    # ----------------------------------------
+    # args, kwargs names
+    # ----------------------------------------
 
     args_name_pos = -1
 
