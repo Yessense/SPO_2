@@ -9,6 +9,10 @@ import types
 import typing as tp
 
 
+def cmp_outcome(op, v, w):
+    pass
+
+
 class Frame:
     """
     Frame header in cpython with description
@@ -150,12 +154,112 @@ class Frame:
         name = self.pop()  # the qualified name of the function (at TOS)  # noqa
         code = self.pop()  # the code associated with the function (at TOS1)
 
-        # TODO: use arg to parse function defaults
+        ERR_TOO_MANY_POS_ARGS = 'Too many positional arguments'
+        ERR_TOO_MANY_KW_ARGS = 'Too many keyword arguments'
+        ERR_MULT_VALUES_FOR_ARG = 'Multiple values for arguments'
+        ERR_MISSING_POS_ARGS = 'Missing positional arguments'
+        ERR_MISSING_KWONLY_ARGS = 'Missing keyword-only arguments'
+
+        CO_VARARGS = 0x0004
+        CO_VARKEYWORDS = 0x0008
+
+        if arg & 0x08:
+            closure = self.pop()
+        if arg & 0x04:
+            annotations = self.pop()
+        if arg & 0x02:
+            kwdefaults = self.pop()
+        else:
+            kwdefaults = None
+        if arg & 0x01:
+            defaults = self.pop()
+        else:
+            defaults = None
 
         def f(*args: tp.Any, **kwargs: tp.Any) -> tp.Any:
-            # TODO: parse input arguments using code attributes such as co_argcount
+            co_flags: int = code.co_flags
+            co_varnames: tp.Tuple[str] = code.co_varnames
+            co_arg_count: int = code.co_argcount
+            co_kwonlyargcount: int = code.co_kwonlyargcount
 
             parsed_args: tp.Dict[str, tp.Any] = {}
+            f_kwargs: tp.Dict[str, tp.Any] = {}
+            f_varargs: tp.Tuple[tp.Any] = tuple()
+
+            # ----------------------------------------
+            # KW ARGS
+            # ----------------------------------------
+
+            for key, value in kwargs.items():
+                if key in co_varnames:
+                    parsed_args[key] = value
+                elif co_flags & CO_VARKEYWORDS:
+                    f_kwargs[key] = value
+                else:
+                    raise TypeError(ERR_TOO_MANY_KW_ARGS)
+
+            # ----------------------------------------
+            # POS ARGS
+            # ----------------------------------------
+
+            # number of default elements
+            n_defaults = len(defaults) if defaults is not None else 0
+            n_args = len(args)
+            defaults_pos = co_arg_count - n_defaults
+
+            for i, name in zip(range(co_arg_count), co_varnames):
+                if i < n_args:
+                    parsed_args[name] = args[i]
+                    if name in kwargs:
+                        raise TypeError(ERR_MULT_VALUES_FOR_ARG)
+                elif name in kwargs:
+                    parsed_args[name] = kwargs[name]
+                elif n_defaults and n_defaults > i - defaults_pos >= 0:
+                    parsed_args[name] = defaults[i - defaults_pos]
+                else:
+                    raise TypeError(ERR_MISSING_POS_ARGS)
+
+            # ----------------------------------------
+            # *Args
+            # ----------------------------------------
+
+            if n_args > co_arg_count:
+                if co_flags & CO_VARARGS:
+                    f_varargs = args[co_arg_count:]
+                else:
+                    raise TypeError(ERR_TOO_MANY_POS_ARGS)
+
+            # ----------------------------------------
+            # kwonly
+            # ----------------------------------------
+
+            kwonly_pos = co_arg_count
+            for i in range(co_kwonlyargcount):
+                name = co_varnames[kwonly_pos + i]
+                if (name not in kwargs and
+                        (kwdefaults is None or
+                         name not in kwdefaults)):
+                    raise TypeError(ERR_MISSING_KWONLY_ARGS)
+                elif (kwdefaults is not None and
+                      name in kwdefaults and
+                      name not in parsed_args):
+                    parsed_args[name] = kwdefaults[name]
+
+            # ----------------------------------------
+            # args, kwargs names
+            # ----------------------------------------
+
+            args_name_pos = -1
+
+            if co_flags & CO_VARKEYWORDS:
+                kwargs_name = co_varnames[-1]
+                parsed_args[kwargs_name] = f_kwargs
+                args_name_pos -= 1
+
+            if co_flags & CO_VARARGS:
+                args_name = co_varnames[args_name_pos]
+                parsed_args[args_name] = f_varargs
+
             f_locals = dict(self.locals)
             f_locals.update(parsed_args)
 
@@ -174,6 +278,19 @@ class Frame:
         """
         const = self.pop()
         self.locals[arg] = const
+
+    def binary_power_op(self, arg: str) -> None:
+        exp = self.pop()
+        base = self.pop()
+        res = pow(base, exp, None)
+        self.push(res)
+
+    def compare_op_op(self, arg: str) -> None:
+        right = self.pop()
+        left = self.pop()
+        res = cmp_outcome(arg, left, right)
+        if arg == '<':
+            return
 
 
 class VirtualMachine:
