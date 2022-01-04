@@ -28,24 +28,24 @@ def compile_code(text_code: tp.Union[types.CodeType, str]) -> types.CodeType:
         if isinstance(const, types.CodeType):
             compile_code(const)
 
-    # print("Disassembled code co params:\n")
-    # print(
-    #     "Co consts: {}\nCo freevars: {}\nCo flags: {}\n"
-    #     "Co cellvars: {}\nCo kwonlyargcount: {}\nCo names: {}\n"
-    #     "Co nlocals: {}\nCo varnames: {}\nCo stacksize: {}\n"
-    #     "Co name: {}\nCo lnotab: {}\nCo argcount: {}\n".format(
-    #         code.co_consts, code.co_freevars,
-    #         code.co_flags,
-    #         code.co_cellvars,
-    #         code.co_kwonlyargcount,
-    #         code.co_names,
-    #         code.co_nlocals,
-    #         code.co_varnames,
-    #         code.co_stacksize,
-    #         code.co_name,
-    #         list(code.co_lnotab),
-    #         code.co_argcount)
-    # )
+    print("Disassembled code co params:\n")
+    print(
+        "Co consts: {}\nCo freevars: {}\nCo flags: {}\n"
+        "Co cellvars: {}\nCo kwonlyargcount: {}\nCo names: {}\n"
+        "Co nlocals: {}\nCo varnames: {}\nCo stacksize: {}\n"
+        "Co name: {}\nCo lnotab: {}\nCo argcount: {}\n".format(
+            code.co_consts, code.co_freevars,
+            code.co_flags,
+            code.co_cellvars,
+            code.co_kwonlyargcount,
+            code.co_names,
+            code.co_nlocals,
+            code.co_varnames,
+            code.co_stacksize,
+            code.co_name,
+            list(code.co_lnotab),
+            code.co_argcount)
+    )
 
     return code
 

@@ -7,10 +7,41 @@ import builtins
 import dis
 import types
 import typing as tp
+from collections import OrderedDict
 
 
 def cmp_outcome(op, v, w):
-    pass
+    if op == '<':
+        return v < w
+    elif op == '<=':
+        return v <= w
+    elif op == '==':
+        return v == w
+    elif op == '!=':
+        return v != w
+    elif op == '>':
+        return v > w
+    elif op == '>=':
+        return v >= w
+    elif op == 'in':
+        return v in w
+    elif op == 'not in':
+        return v not in w
+    elif op == 'is':
+        return v is w
+    elif op == 'is not':
+        return v is not w
+    elif op == 'is not':
+        return v is not w
+    elif op == 'exception match':
+        return None
+
+
+class Instruction:
+    def __init__(self, opname: str, offset: int, argval: tp.Any):
+        self.opname: str = opname
+        self.offset: int = offset
+        self.argval: tp.Any = argval
 
 
 class Frame:
@@ -27,12 +58,49 @@ class Frame:
                  frame_builtins: tp.Dict[str, tp.Any],
                  frame_globals: tp.Dict[str, tp.Any],
                  frame_locals: tp.Dict[str, tp.Any]) -> None:
+        self.current_offset = None
         self.code = frame_code
         self.builtins = frame_builtins
         self.globals = frame_globals
         self.locals = frame_locals
         self.data_stack: tp.Any = []
         self.return_value = None
+        self.shift = 2
+
+        instruction: dis.Instruction
+        self.instructions = [Instruction(opname=instruction.opname.lower() + "_op",
+                                         offset=instruction.offset,
+                                         argval=instruction.argval)
+                             for instruction in dis.get_instructions(self.code)]
+        self.max_offset = len(self.instructions)
+
+    def run(self) -> tp.Any:
+        self.current_offset = 0
+        while self.current_offset < self.max_offset:
+            instruction: Instruction = self.instructions[self.current_offset]
+            # print(f'Before: {self.current_offset}')
+            getattr(self, instruction.opname)(instruction.argval)
+            self.current_offset += 1
+            # print(f'After: {self.current_offset}')
+        return self.return_value
+
+    def jump_forward_op(self, arg):
+        self.current_offset += arg // self.shift
+        self.current_offset -= 1
+
+    def pop_jump_if_true_op(self, arg) -> None:
+        cond = self.pop()
+        if not cond:
+            return None
+        else:
+            self.current_offset = arg // self.shift - 1
+
+    def pop_jump_if_false_op(self, arg) -> None:
+        cond = self.pop()
+        if cond:
+            return None
+        else:
+            self.current_offset = arg // self.shift - 1
 
     def top(self) -> tp.Any:
         return self.data_stack[-1]
@@ -54,11 +122,6 @@ class Frame:
             return returned
         else:
             return []
-
-    def run(self) -> tp.Any:
-        for instruction in dis.get_instructions(self.code):
-            getattr(self, instruction.opname.lower() + "_op")(instruction.argval)
-        return self.return_value
 
     def call_function_op(self, arg: int) -> None:
         """
@@ -289,8 +352,167 @@ class Frame:
         right = self.pop()
         left = self.pop()
         res = cmp_outcome(arg, left, right)
-        if arg == '<':
-            return
+        self.push(res)
+        if res is None:
+            raise TypeError
+
+    def load_fast_op(self, arg: str):
+        value = self.locals[arg]
+        self.push(value)
+
+    def store_fast_op(self, arg):
+        value = self.pop()
+        self.locals[arg] = value
+
+    def binary_add_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        sum = left + right
+        self.push(sum)
+
+    def binary_multiply_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        res = left * right
+        self.push(res)
+
+    def binary_or_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        res = left | right
+        self.push(res)
+
+    def binary_xor_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        res = left ^ right
+        self.push(res)
+
+    def binary_and_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        res = left & right
+        self.push(res)
+
+    def binary_floor_divide_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        res = left // right
+        self.push(res)
+
+    def binary_matrix_multiply_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        res = left @ right
+        self.push(res)
+
+    def binary_lshift_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        res = left << right
+        self.push(res)
+
+    def binary_rshift_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        res = left >> right
+        self.push(res)
+
+    def binary_subtract_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        res = left - right
+        self.push(res)
+
+    def binary_true_divide_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        res = left / right
+        self.push(res)
+
+    def inplace_add_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left += right
+        self.push(left)
+
+    def inplace_and_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left &= right
+        self.push(left)
+
+    def inplace_division_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left /= right
+        self.push(left)
+
+    def inplace_floor_divide_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left //= right
+        self.push(left)
+
+    def inplace_lshift_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left <<= right
+        self.push(left)
+
+    def inplace_matrix_multiply_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left @= right
+        self.push(left)
+
+    def inplace_module_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left %= right
+        self.push(left)
+
+    def inplace_multiply_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left *= right
+        self.push(left)
+
+    def inplace_or_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left |= right
+        self.push(left)
+
+    def inplace_power_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left **= right
+        self.push(left)
+
+    def inplace_rshift_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left >>= right
+        self.push(left)
+
+    def inplace_subtract_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left -= right
+        self.push(left)
+
+    def inplace_xor_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left ^= right
+        self.push(left)
+
+    def inplace_true_divide_op(self, arg):
+        right = self.pop()
+        left = self.pop()
+        left /= right
+        self.push(left)
 
 
 class VirtualMachine:
