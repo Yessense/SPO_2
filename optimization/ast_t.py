@@ -3,7 +3,7 @@ import _ast
 
 statement_1 = """
 def test_func():
-    a = 1
+    a = 1.
     return a
     a = 2
 """
@@ -78,4 +78,11 @@ remove_empty_object(statement_3_parsed)
 
 statement_4_parsed: _ast.Module = ast.parse(statement_4, "<string>", "exec")
 remove_empty_object(statement_4_parsed)
+
+class Visitor(ast.NodeVisitor):
+    def generic_visit(self, node):
+        print(type(node).__name__)
+        ast.NodeVisitor.generic_visit(self, node)
+v = Visitor()
+v.visit(statement_1_parsed)
 print("Done")
