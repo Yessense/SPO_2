@@ -28,7 +28,7 @@ class Tri:
             if element < 0:
                 return f'Null'
             else:
-                return f'^{element}'
+                return f'^{element + 1}'
         elif isinstance(element, _ast.Num):
             return f'{element.n}'
         elif isinstance(element, _ast.Name):
@@ -41,7 +41,7 @@ class Tri:
             return f'{self.op.__class__.__name__}'
 
     def __str__(self):
-        return f'{self.number}. ' \
+        return f'{self.number + 1}. ' \
                f'({self.op_repr(self.op)}, ' \
                f'{self.element_repr(self.left)}, ' \
                f'{self.element_repr(self.right)})'
@@ -279,24 +279,59 @@ print_var_dependencies()
 print_triades_dependencies()
 
 
+def dicts_are_same(dict_1: Dict, dict_2: Dict) -> bool:
+    for key, value in dict_1.items():
+        if value > 0 and (key not in dict_2 or dict_2[key] != value):
+            return False
+    return True
+
+
 def replace_same_triades(triades: List[Tri]):
     for i, triade_i in enumerate(triades):
-        for j, triade_j in zip(range(i - 1), triades):
+        for j, triade_j in zip(range(i), triades):
             if isinstance(triade_i.op, _ast.operator) and isinstance(triade_j.op, _ast.operator):
-                if type(triade_i.op) == type(triade_j.op):
-                    if (isinstance(triade_i.left, _ast.Name) and
-                            isinstance(triade_i.right, _ast.Name) and
-                            isinstance(triade_j.left, _ast.Name) and
-                            isinstance(triade_j.right, _ast.Name) and
-                            triade_i.left.id == triade_j.left.id and
-                            triade_i.right.id == triade_j.right.id):
-                        same_tri = Tri('Same', left=j, right=-1)
-                        triades[i] = same_tri
-            if isinstance(triade_j.op, str) and triade_j.op == 'Same':
-                if
+                if (type(triade_i.op) == type(triade_j.op) and type(triade_i.left) == type(triade_j.left) and
+                        type(triade_i.right) == type(triade_j.right)):
+                    if isinstance(triade_i.left, _ast.Name):
+                        if triade_i.left.id != triade_j.left.id:
+                            continue
+                        if var_dependency[i][triade_i.left.id] != var_dependency[j][triade_j.left.id]:
+                            continue
+                    if isinstance(triade_i.right, _ast.Name):
+                        if triade_i.right.id != triade_j.right.id:
+                            continue
+                        if var_dependency[i][triade_i.right.id] != var_dependency[j][triade_j.right.id]:
+                            continue
+                    if isinstance(triade_i.left, int) and triade_i.left != triade_j.left:
+                        continue
+                    if isinstance(triade_i.right, int) and triade_i.right != triade_j.right:
+                        continue
+                    triades[i].op = 'Same'
+                    triades[i].left = j
+                    triades[i].right = -1
+        if isinstance(triades[i].left, int) and triades[i].left >= 0:
+            index = triades[i].left
+            if isinstance(triades[index].op, str) and triades[index].op == 'Same':
+                triades[i].left = triades[index].left
+        if isinstance(triades[i].right, int) and triades[i].right >= 0:
+            index = triades[i].right
+            if isinstance(triades[index].op, str) and triades[index].op == 'Same':
+                triades[i].right = triades[index].left
 
-
-
-replace_same_triades(triades)
+print('-' * 60)
+print(f'Showing triades before replacement same operations')
 show_triades(triades)
-print("done")
+
+for _ in range(len(triades)):
+    replace_same_triades(triades)
+print('-' * 60)
+print(f'Replacing same operations')
+show_triades(triades)
+
+def remove_same_triades(triades: List[Tri]):
+    return [triade for triade in triades if not (isinstance(triade.op, str) and triade.op == 'Same')]
+
+print('-' * 60)
+print(f'Remove same triades')
+triades = remove_same_triades(triades)
+show_triades(triades)
