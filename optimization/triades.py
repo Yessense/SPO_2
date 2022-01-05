@@ -335,3 +335,10 @@ print('-' * 60)
 print(f'Remove same triades')
 triades = remove_same_triades(triades)
 show_triades(triades)
+
+def make_tree_from_triades(triades: List[Tri]):
+    module = _ast.Module()
+
+    pass
+
+print("Done")
