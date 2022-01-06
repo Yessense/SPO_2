@@ -338,7 +338,13 @@ show_triades(triades)
 
 def make_tree_from_triades(triades: List[Tri]):
     module = _ast.Module()
+    module.body = []
+    for triade in triades:
+        if isinstance(triade.op, _ast.Assign):
+            module.body.append(triade.op)
 
-    pass
+    return module
+
+module = make_tree_from_triades(triades)
 
 print("Done")
