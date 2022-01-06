@@ -230,6 +230,21 @@ triades_dependency: Dict[int, int] = {}
 var_dependency: List[Dict[str, int]] = []
 
 
+# --------------------------------------------------------------------------------
+# Чтобы следить за внутренней зависимостью переменных и триад, алгоритм
+# присваивает им некоторые значения, называемые числами зависимости, по следующим
+# правилам:
+# --------------------------------------------------------------------------------
+# - изначально для каждой переменной ее число зависимости равно 0, так как в начале
+# работы программы значение переменной не зависит ни от какой триады;
+# - после обработки i-й триады, в которой переменной А присваивается некоторое
+# значение, число зависимости А (dep(A) ) получает значение i, так как значение А
+# теперь зависит от данной i-й триады;
+# - при обработке i-й триады ее число зависимости (dep(i)) принимается равным
+# значению 1+ (максимальное_из_чисел_зависимости_операндов).
+# --------------------------------------------------------------------------------
+
+
 def get_operand_dependency_value(operand: Union[_ast.Name, int, _ast.Num], i_var_dependency) -> int:
     if isinstance(operand, _ast.Name):
         if not operand.id in i_var_dependency:
@@ -289,6 +304,10 @@ def dicts_are_same(dict_1: Dict, dict_2: Dict) -> bool:
 def replace_same_triades(triades: List[Tri]):
     for i, triade_i in enumerate(triades):
         for j, triade_j in zip(range(i), triades):
+            # 2. Вычисляется число зависимости текущей триады с номером i, исходя из чисел
+            # зависимости ее операндов.
+            # 3. Если в просмотренной части списка триад существует идентичная j-я триада, причем j <
+            # i и dер(i) = dep( j), то текущая триада i заменяется на триаду особого вида SAME(j,0).
             if isinstance(triade_i.op, _ast.operator) and isinstance(triade_j.op, _ast.operator):
                 if (type(triade_i.op) == type(triade_j.op) and type(triade_i.left) == type(triade_j.left) and
                         type(triade_i.right) == type(triade_j.right)):
@@ -309,6 +328,11 @@ def replace_same_triades(triades: List[Tri]):
                     triades[i].op = 'Same'
                     triades[i].left = j
                     triades[i].right = -1
+
+        # --------------------------------------------------------------------------------
+        # 1. Если какой-то операнд триады ссылается на особую триаду вида SAME(j,0), то он
+        # заменяется на ссылку на триаду с номером j (^ j)
+
         if isinstance(triades[i].left, int) and triades[i].left >= 0:
             index = triades[i].left
             if isinstance(triades[index].op, str) and triades[index].op == 'Same':
@@ -317,6 +341,7 @@ def replace_same_triades(triades: List[Tri]):
             index = triades[i].right
             if isinstance(triades[index].op, str) and triades[index].op == 'Same':
                 triades[i].right = triades[index].left
+
 
 print('-' * 60)
 print(f'Showing triades before replacement same operations')
@@ -328,13 +353,16 @@ print('-' * 60)
 print(f'Replacing same operations')
 show_triades(triades)
 
+
 def remove_same_triades(triades: List[Tri]):
     return [triade for triade in triades if not (isinstance(triade.op, str) and triade.op == 'Same')]
+
 
 print('-' * 60)
 print(f'Remove same triades')
 triades = remove_same_triades(triades)
 show_triades(triades)
+
 
 def make_tree_from_triades(triades: List[Tri]):
     module = _ast.Module()
@@ -346,5 +374,11 @@ def make_tree_from_triades(triades: List[Tri]):
     return module
 
 module = make_tree_from_triades(triades)
+
+# Алгоритм преобразования триад в команды языка ассемблера – это единственная
+# машинно-зависимая часть общего алгоритма. При преобразовании компилятора для
+# работы с другим результирующим объектным кодом потребуется изменить только эту
+# часть, при этом все алгоритмы оптимизации и внутреннее представление программы
+# останутся неизменными
 
 print("Done")
