@@ -50,13 +50,13 @@ class TokenType(Enum):
 
 @dataclasses.dataclass
 class Token:
-    token: str
+    name: str
     tag: TokenType
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
-        return self.token == other.token and self.tag == other.tag
+        return self.name == other.name and self.tag == other.tag
 
     def __str__(self):
-        return f'<{self.token}:{self.tag.name}>'
+        return f'<{self.name}:{self.tag.name}>'

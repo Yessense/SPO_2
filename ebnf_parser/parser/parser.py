@@ -36,14 +36,14 @@ class Parser:
 
         return Rule(rule, definition)
 
-    def left(self) -> Rule:
+    def left(self) -> Token:
         if self.look.tag == TokenType.RULE:
             token = self.look
             self.move_next()
             return token
         raise TypeError(f"Unexpect {self.look}")
 
-    def right(self) -> tp.Optional[tp.Union[Optional, Repetition, Grouping, Alternation, Concatenation]]:
+    def right(self) -> tp.Optional[tp.Union[Token, Optional, Repetition, Grouping, Alternation, Concatenation]]:
         token = None
         bracket = None
 
